@@ -1,0 +1,7 @@
+gradio_client
+numpy
+requests
+torchaudio
+time
+random
+string

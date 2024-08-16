@@ -1,0 +1,236 @@
+import os
+from ..utils import TTS_MODELS, LANGUAGE_CODES, text_translate
+from ..tools.i18n.i18n import I18nAuto
+from gradio_client import Client
+
+i18n = I18nAuto()
+language_list = [i18n("中文"), i18n("英文"), i18n("日文"), i18n("中英混合"), i18n("日英混合"), i18n("多语种混合")]
+
+class Xstu_tts:
+    # 初始化方法，在类实例化时调用，可以做一些初始化操作，但很多自定义节点由于都有各自的模块文件夹，所以通常是在模块文件夹里的__init__.py文件中进行初始化操作
+    def __init__(self):
+        pass
+    
+    @classmethod
+    def INPUT_TYPES(cls):
+        how_to_cuts = [i18n("不切"), i18n("凑四句一切"), i18n("凑50字一切"), i18n("按中文句号。切"), i18n("按英文句号.切"), i18n("按标点符号切"), ]
+        return {
+            "required": {
+                "URL": ("STRING", {
+                    "default":"https://tts.soohooai.com/"
+                    }),
+                "platform": ([*TTS_MODELS], {
+                    "default": "sumi"
+                    }),
+                "refer_language":(language_list,{
+                    "default": i18n("中文")
+                    }),
+                "text_language":(language_list,{
+                    "default": i18n("中文")
+                    }),
+                "text": ("STRING",{
+                    "default": "这里输入你想要生成语言的内容",
+                    "multiline": True
+                    }),
+                "how_to_cut":(how_to_cuts,{
+                    "default": i18n("不切")
+                    }),
+                "top_k":("INT",{
+                    "default":20,
+                    "min":1,
+                    "max": 100,
+                    "step": 1,
+                    "display": "slider"
+                    }),
+                "top_p":("FLOAT",{
+                    "default":1,
+                    "min":0,
+                    "max": 1,
+                    "step": 0.05,
+                    "display": "slider"
+                    }),
+                "temperature":("FLOAT",{
+                    "default":1,
+                    "min":0,
+                    "max": 1,
+                    "step": 0.05,
+                    "display": "slider"
+                    }),
+            },
+            "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "unique_id": "UNIQUE_ID"},
+        }
+ 
+    RETURN_TYPES = ('AUDIO',)
+    FUNCTION = "xstu_func"
+    OUTPUT_NODE = False
+ 
+    CATEGORY = "Xstu/API"
+ 
+    def xstu_func(text, platform, refer_language, text_language, how_to_cut, top_k, top_p, temperature, temperature2):
+        client = Client("https://tts.soohooai.com/")
+        result = client.predict(
+            param_0=text,  # 输入文本
+            param_1=platform,  # 选择角色
+            param_2="default",  # Emotion list
+            param_3=handle_file('https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav'),  # 参考音频路径
+            param_4="Hello!!",  # 参考音频文本
+            param_5=refer_language,  # 参考音频语言
+            param_6=1,  # 语速
+            param_7=text_language,  # 文本语言
+            param_8=how_to_cut,  # 文本切割方法
+            param_9=50,  # 文本切割最大长度
+            param_10=10,  # 批处理大小
+            param_11=-1,  # 随机种子
+            param_12=True,  # 并行推理
+            param_13=top_k,  # 采样Top K
+            param_14=top_p,  # 采样Top P
+            param_15=temperature,  # 采样温度
+            param_16=1.35,  # 重复惩罚
+            api_name="/get_audio"
+)
+        print(result)
+ 
+ 
+# A dictionary that contains all nodes you want to export with their names
+# NOTE: names should be globally unique
+NODE_CLASS_MAPPINGS = {
+    "xstu": Xstu_tts,
+}
+ 
+# A dictionary that contains the friendly/humanly readable titles for the nodes
+NODE_DISPLAY_NAME_MAPPINGS = {
+    "xstu": "语音合成",
+}
+
+
+def fetch_and_save_audio(character, text):
+    # URL 编码
+    base_url = "https://tts.soohooai.com/tts?"
+    params = {
+        "character": character,
+        "text": text
+    }
+    # 发送 GET 请求
+    response = requests.get(base_url, params=params)
+    
+    if response.status_code == 200:
+        # 将音频文件保存到本地
+        with open("output.wav", "wb") as file:
+            file.write(response.content)
+        print("音频文件保存成功")
+    else:
+        print(f"请求失败，状态码：{response.status_code}")
+
+# 使用示例
+fetch_and_save_audio("CoCo直播", "我是一个粉刷匠")
+
+
+
+#===============备份=================
+
+import os
+import requests
+import torchaudio
+import time
+import random
+import string
+from ..tools.i18n.i18n import I18nAuto
+from ..utils import TTS_MODELS
+from urllib.parse import quote
+from gradio_client import Client
+
+i18n = I18nAuto()
+language_list = [i18n("中文"), i18n("英文"), i18n("日文"), i18n("中英混合"), i18n("日英混合"), i18n("多语种混合")]
+
+class Xstu_tts:
+    SUPPORTED_FORMATS = ('.wav', '.mp3', '.ogg', '.flac', '.aiff', '.aif')
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        # 获取用户输入
+        return {
+            "required": {
+                "URL": ("STRING", {
+                    "default":"https://tts.soohooai.com/"
+                    }),
+                "stream": ([False, True], {"default": False}),
+                "character": ([*TTS_MODELS], {
+                    "default": "苏明",
+                    "widget": "text"
+                    }),   
+                "text": ("STRING",{
+                    "default": "这里输入你想要生成语言的内容",
+                    "multiline": True
+                    }),
+                "text_language":(language_list,{
+                    "default": i18n("中文"),
+                    "widget": "text"
+                    }),
+                "speed":("FLOAT",{
+                    "default": 1,
+                    "min": 1,
+                    "max": 5,
+                    "step": 0.05,
+                    "display": "slider"
+                    }),
+                "top_k":("INT",{
+                    "default":20,
+                    "min":1,
+                    "max": 100,
+                    "step": 1,
+                    "display": "slider"
+                    }),
+                "top_p":("FLOAT",{
+                    "default":1,
+                    "min":0,
+                    "max": 1,
+                    "step": 0.05,
+                    "display": "slider"
+                    }),
+                "temperature":("FLOAT",{
+                    "default":1,
+                    "min":0,
+                    "max": 1,
+                    "step": 0.05,
+                    "display": "slider"
+                    }),
+            }
+        }
+
+    CATEGORY = "🐅Xstu/API"
+    RETURN_TYPES = ("AUDIO", )
+    FUNCTION = "xstu_func"
+
+    @staticmethod
+    def generate_random_filename(extension):
+        """生成一个随机文件名"""
+        timestamp = time.strftime("%Y%m%d%H%M%S")
+        random_suffix = ''.join(random.choices(string.ascii_letters + string.digits, k=5))
+        return f"{timestamp}_{random_suffix}{extension}"
+
+    def xstu_func(self, URL, stream, character, text_language, speed, top_k, top_p, temperature, text):
+        # 对文本进行 URL 编码
+        encoded_text = quote(text)
+        # 构建请求URL
+        url = f"{URL}/tts?stream={stream}&character={character}&text_language={text_language}&speed={speed}&top_k={top_k}&top_p={top_p}&temperature={temperature}&text={text}"
+        response = requests.get(url)
+
+        if response.status_code == 200:
+            # 创建输出目录如果不存在
+            output_dir = '/workspace/ComfyUI/output/wav/'
+            os.makedirs(output_dir, exist_ok=True)
+
+            # 保存文件
+            file_extension = '.wav'  # 假设返回的音频格式是wav
+            random_filename = self.generate_random_filename(file_extension)
+            file_path = os.path.join(output_dir, random_filename)
+
+            with open(file_path, 'wb') as f:
+                f.write(response.content)
+
+            # 加载音频文件
+            waveform, sample_rate = torchaudio.load(file_path)
+            audio = {"waveform": waveform.unsqueeze(0), "sample_rate": sample_rate}
+            return (audio, )
+        else:
+            raise Exception(f"请求失败，状态码：{response.status_code}")
